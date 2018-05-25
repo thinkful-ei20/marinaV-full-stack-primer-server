@@ -4,6 +4,10 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 
+const data = require('./db/cheeses');
+const simDB = require('./db/simDB');
+const Cheese = simDB.initialize(data);
+
 const { PORT, CLIENT_ORIGIN } = require('./config');
 // const { dbConnect } = require('./db-mongoose');
 const {dbConnect} = require('./db-knex');
@@ -16,6 +20,9 @@ app.use(
   })
 );
 
+// Parse request body
+app.use(express.json());
+
 app.use(
   cors({
     origin: CLIENT_ORIGIN
@@ -23,31 +30,32 @@ app.use(
 );
 
 app.get('/api/cheeses', (req, res, next) => {
-  // return res.status(500).send('Something broke!');
   // return res.sendStatus(500);
   // return res.status(500).json({code: 500, message: 'Internal server error'});
-  return res.json([
-    "Bath Blue",
-    "Barkham Blue",
-    "Buxton Blue",
-    "Cheshire Blue",
-    "Devon Blue",
-    "Dorset Blue Vinney",
-    "Dovedale",
-    "Exmoor Blue",
-    "Harbourne Blue",
-    "Lanark Blue",
-    "Lymeswold",
-    "Oxford Blue",
-    "Shropshire Blue",
-    "Stichelton",
-    "Stilton",
-    "Blue Wensleydale",
-    "Yorkshire Blue"
-  ])
-    .catch(err => {
-    console.log('SERVER ERROR', err);
-  })
+  Cheese.filter('', (err, list) => {
+    if (err) {
+      return next(err);
+    }
+
+    res.json(list);
+  });
+});
+
+app.post('/api/cheeses', (req, res, next) => {
+  const { cheeseType } = req.body;
+  console.log('VALUES', cheeseType);
+  const newItem = { type: cheeseType };
+  Cheese.create(newItem, (err, item) => {
+    if(err) {
+      console.log('POST ERROR', err);
+    }
+    if(item) {
+      res.location(`http://${req.headers.host}/cheeses/${item.id}`).status(201).json(item);
+    } else {
+      next();
+    }
+  });
+  // res.status(201).json('OK');
 });
 
 
